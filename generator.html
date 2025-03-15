@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avatar & Banner Generator</title>
+    <style>
+        :root {
+            --primary: #1890ff;
+            --success: #52c41a;
+            --error: #ff4d4f;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .controls {
+            background: #fafafa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .preview {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        input[type="color"] {
+            height: 40px;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #40a9ff;
+        }
+
+        .mode-switch {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .mode-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .preview-image {
+            border: 2px dashed #d9d9d9;
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 0;
+        }
+
+        .preview-image img {
+            max-width: 100%;
+            height: auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .url-display {
+            width: 100%;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            word-break: break-all;
+            font-family: monospace;
+        }
+
+        .copy-btn {
+            background: var(--success);
+            margin-top: 10px;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            transform: translateY(100px);
+            transition: transform 0.3s;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group label.checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .avatar-only {
+            display: block;  /* Changed from 'none' to 'block' */
+        }
+
+        .gradient-preview {
+            height: 40px;
+            border-radius: 4px;
+            margin-top: 10px;
+            border: 1px solid #d9d9d9;
+        }
+
+        .gradient-controls {
+            background: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #d9d9d9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <div class="mode-switch">
+                <button class="mode-btn active" onclick="switchMode('avatar')">Avatar</button>
+                <button class="mode-btn" onclick="switchMode('banner')">Banner</button>
+            </div>
+
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="name" value="John Doe" title="Enter your name" placeholder="Enter your name">
+            </div>
+
+            <div class="form-group">
+                <label>Size</label>
+                <input type="number" id="size" value="200" min="16" max="512" title="Enter the size (16-512)" placeholder="Enter size">
+            </div>
+
+            <div class="form-group banner-only" style="display: none;">
+                <label>Ratio</label>
+                <select id="ratio">
+                    <option value="16:9">16:9</option>
+                    <option value="4:3">4:3</option>
+                    <option value="2:1">2:1</option>
+                    <option value="1:1">1:1</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Background</label>
+                <input type="color" id="background" value="#f0e9e9" title="Choose a background color">
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    Use Gradient
+                    <input type="checkbox" id="useGradient">
+                </label>
+                <div id="gradientControls" class="gradient-controls" style="display: none; margin-top: 10px;">
+                    <label>Gradient Colors</label>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <div style="flex: 1;">
+                            <small>Start Color</small>
+                            <input type="color" id="gradientStart" value="#ff0000" title="Start color" oninput="updateGradientPreview()">
+                        </div>
+                        <div style="flex: 1;">
+                            <small>End Color</small>
+                            <input type="color" id="gradientEnd" value="#0000ff" title="End color" oninput="updateGradientPreview()">
+                        </div>
+                    </div>
+                    <label>Gradient Angle (degrees)</label>
+                    <input type="range" id="gradientAngle" min="0" max="360" value="90" 
+                           oninput="updateGradientPreview(); this.nextElementSibling.value = this.value">
+                    <output>90</output>
+                    <div id="gradientPreview" class="gradient-preview"></div>
+                </div>
+            </div>
+
+            <div class="form-group avatar-only">
+                <label class="checkbox-label">
+                    Rounded Avatar
+                    <input type="checkbox" id="rounded">
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>Pattern</label>
+                <select id="pattern" title="Choose a pattern">
+                    <option value="">None</option>
+                    <option value="dots">Dots</option>
+                    <option value="lines">Lines</option>
+                    <option value="grid">Grid</option>
+                    <option value="waves">Waves</option>
+                    <option value="zigzag">Zigzag</option>
+                    <option value="diamonds">Diamonds</option>
+                    <option value="stars">Stars</option>
+                    <option value="triangles">Triangles</option>
+                    <option value="crosshatch">Crosshatch</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Animation</label>
+                <select id="animation" title="Choose an animation">
+                    <option value="">None</option>
+                    <option value="float">Float</option>
+                    <option value="pulse">Pulse</option>
+                    <option value="rotate">Rotate</option>
+                    <option value="shake">Shake</option>
+                    <option value="bounce">Bounce</option>
+                    <option value="glitch">Glitch</option>
+                    <option value="ripple">Ripple</option>
+                    <option value="swing">Swing</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Text Effect</label>
+                <select id="textEffect" title="Choose a text effect">
+                    <option value="">None</option>
+                    <option value="shadow">Shadow</option>
+                    <option value="glow">Glow</option>
+                    <option value="outline">Outline</option>
+                    <option value="double-outline">Double Outline</option>
+                    <option value="metallic">Metallic</option>
+                    <option value="neon">Neon</option>
+                    <option value="chrome">Chrome</option>
+                    <option value="retro">Retro</option>
+                    <option value="vintage">Vintage</option>
+                </select>
+            </div>
+
+            <button onclick="generateImage()">Generate</button>
+        </div>
+
+        <div class="preview">
+            <div class="preview-image">
+                <img id="preview" src="/api?name=John+Doe" alt="Generated Image">
+            </div>
+            <div class="url-display" id="url"></div>
+            <button class="copy-btn" onclick="copyUrl()">Copy URL</button>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">URL copied to clipboard!</div>
+
+    <script>
+        let currentMode = 'avatar';
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.toLowerCase() === mode);
+            });
+            document.querySelectorAll('.banner-only').forEach(el => {
+                el.style.display = mode === 'banner' ? 'block' : 'none';
+            });
+            document.querySelectorAll('.avatar-only').forEach(el => {
+                el.style.display = mode === 'avatar' ? 'block' : 'none';
+            });
+            generateImage();
+        }
+
+        function generateImage() {
+            const params = new URLSearchParams();
+            
+            // Use production API URL
+            const API_URL = 'http://localhost:3000/api';   
+            
+            // Common parameters
+            params.set('name', document.getElementById('name').value);
+            params.set('size', document.getElementById('size').value);
+            
+            // Handle gradient or solid background
+            const useGradient = document.getElementById('useGradient').checked;
+            if (useGradient) {
+                const gradientStart = document.getElementById('gradientStart').value.substring(1);
+                const gradientEnd = document.getElementById('gradientEnd').value.substring(1);
+                const gradientAngle = document.getElementById('gradientAngle').value;
+                // Send gradient colors and angle as separate parameters
+                params.set('gradientStart', gradientStart);
+                params.set('gradientEnd', gradientEnd);
+                params.set('gradientAngle', gradientAngle);
+            } else {
+                params.set('background', document.getElementById('background').value.substring(1));
+            }
+            
+            // Handle rounded avatar
+            if (currentMode === 'avatar' && document.getElementById('rounded').checked) {
+                params.set('rounded', 'true');
+            }
+
+            if (currentMode === 'banner') {
+                params.set('mode', 'banner');
+                params.set('ratio', document.getElementById('ratio').value);
+            }
+
+            const pattern = document.getElementById('pattern').value;
+            if (pattern) params.set('pattern', pattern);
+
+            const animation = document.getElementById('animation').value;
+            if (animation) params.set('animation', animation);
+
+            const textEffect = document.getElementById('textEffect').value;
+            if (textEffect) params.set('textEffect', textEffect);
+
+            const url = `${API_URL}?${params.toString()}`;
+            document.getElementById('preview').src = url;
+            document.getElementById('url').textContent = url;
+        }
+
+        function copyUrl() {
+            const url = document.getElementById('url').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                const notification = document.getElementById('notification');
+                notification.classList.add('show');
+                setTimeout(() => notification.classList.remove('show'), 2000);
+            });
+        }
+
+        // Add event listener for gradient toggle
+        document.getElementById('useGradient').addEventListener('change', function() {
+            document.getElementById('gradientControls').style.display = 
+                this.checked ? 'block' : 'none';
+            const previewImage = document.querySelector('.preview-image');
+            if (!this.checked) {
+                previewImage.style.background = '';
+            }
+            if (this.checked) {
+                updateGradientPreview();
+            }
+            generateImage();
+        });
+
+        function updateGradientPreview() {
+            const start = document.getElementById('gradientStart').value;
+            const end = document.getElementById('gradientEnd').value;
+            const angle = document.getElementById('gradientAngle').value;
+            const preview = document.getElementById('gradientPreview');
+            
+            // Update small gradient preview
+            preview.style.background = `linear-gradient(${angle}deg, ${start}, ${end})`;
+            
+            // Update preview only if gradient is enabled
+            if (document.getElementById('useGradient').checked) {
+                generateImage();
+            }
+        }
+
+        // Update event listeners for gradient controls
+        document.getElementById('gradientStart').addEventListener('input', updateGradientPreview);
+        document.getElementById('gradientEnd').addEventListener('input', updateGradientPreview);
+        document.getElementById('gradientAngle').addEventListener('input', updateGradientPreview);
+
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show avatar-only elements by default since we start in avatar mode
+            document.querySelectorAll('.avatar-only').forEach(el => {
+                el.style.display = 'block';
+            });
+            // Hide banner-only elements
+            document.querySelectorAll('.banner-only').forEach(el => {
+                el.style.display = 'none';
+            });
+            // Initial generation
+            generateImage();
+            updateGradientPreview(); // Initialize gradient preview
+        });
+    </script>
+</body>
+</html>
